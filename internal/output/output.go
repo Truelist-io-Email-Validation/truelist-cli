@@ -33,6 +33,18 @@ func PrintValidationResult(w io.Writer, r *client.ValidationResult) {
 	}
 	fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("Free email:"), freeEmail)
 
+	role := "no"
+	if r.Role {
+		role = "yes"
+	}
+	fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("Role:"), role)
+
+	disposable := "no"
+	if r.Disposable {
+		disposable = "yes"
+	}
+	fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("Disposable:"), disposable)
+
 	if r.Suggestion != "" {
 		fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("Suggestion:"), cyan.Sprint(r.Suggestion))
 	}

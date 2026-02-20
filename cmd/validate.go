@@ -208,7 +208,7 @@ func runFileValidation(c *client.Client) error {
 	writer := csv.NewWriter(outFile)
 
 	// Write header with new columns.
-	outHeader := append(header, "truelist_state", "truelist_sub_state", "truelist_suggestion")
+	outHeader := append(header, "truelist_state", "truelist_sub_state", "truelist_role", "truelist_disposable", "truelist_suggestion")
 	if err := writer.Write(outHeader); err != nil {
 		return fmt.Errorf("failed to write header: %w", err)
 	}
@@ -229,7 +229,7 @@ func runFileValidation(c *client.Client) error {
 	for _, row := range rows {
 		if emailColIdx >= len(row) {
 			// Row doesn't have enough columns; write it with empty validation fields.
-			outRow := append(row, "", "", "")
+			outRow := append(row, "", "", "", "", "")
 			_ = writer.Write(outRow)
 			_ = bar.Add(1)
 			continue
@@ -237,7 +237,7 @@ func runFileValidation(c *client.Client) error {
 
 		email := strings.TrimSpace(row[emailColIdx])
 		if email == "" {
-			outRow := append(row, "", "", "")
+			outRow := append(row, "", "", "", "", "")
 			_ = writer.Write(outRow)
 			_ = bar.Add(1)
 			continue
@@ -246,7 +246,7 @@ func runFileValidation(c *client.Client) error {
 		result, validateErr := c.Validate(context.Background(), email)
 		if validateErr != nil {
 			fmt.Fprintf(os.Stderr, "\nWarning: failed to validate %s: %s\n", email, validateErr)
-			outRow := append(row, "error", validateErr.Error(), "")
+			outRow := append(row, "error", validateErr.Error(), "", "", "")
 			_ = writer.Write(outRow)
 			_ = bar.Add(1)
 			continue
@@ -254,7 +254,16 @@ func runFileValidation(c *client.Client) error {
 
 		counts[strings.ToLower(result.State)]++
 
-		outRow := append(row, result.State, result.SubState, result.Suggestion)
+		role := "false"
+		if result.Role {
+			role = "true"
+		}
+		disposable := "false"
+		if result.Disposable {
+			disposable = "true"
+		}
+
+		outRow := append(row, result.State, result.SubState, role, disposable, result.Suggestion)
 		if writeErr := writer.Write(outRow); writeErr != nil {
 			return fmt.Errorf("failed to write row: %w", writeErr)
 		}

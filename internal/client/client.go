@@ -18,10 +18,12 @@ const (
 
 // ValidationResult holds the response from the Truelist API.
 type ValidationResult struct {
-	Email     string `json:"email"`
-	State     string `json:"state"`
-	SubState  string `json:"sub_state"`
-	FreeEmail bool   `json:"free_email"`
+	Email      string `json:"email"`
+	State      string `json:"state"`
+	SubState   string `json:"sub_state"`
+	FreeEmail  bool   `json:"free_email"`
+	Role       bool   `json:"role"`
+	Disposable bool   `json:"disposable"`
 	Suggestion string `json:"suggestion,omitempty"`
 }
 
