@@ -143,6 +143,13 @@ func runStdinValidation(c *client.Client) error {
 }
 
 func runFileValidation(c *client.Client) error {
+	if flagJSON {
+		return fmt.Errorf("--json flag is not supported with --file mode (CSV output is always used)")
+	}
+	if flagQuiet {
+		return fmt.Errorf("--quiet flag is not supported with --file mode (CSV output is always used)")
+	}
+
 	f, err := os.Open(flagFile)
 	if err != nil {
 		output.PrintError(os.Stderr, fmt.Sprintf("could not open file: %s", err))
@@ -199,7 +206,6 @@ func runFileValidation(c *client.Client) error {
 	defer outFile.Close()
 
 	writer := csv.NewWriter(outFile)
-	defer writer.Flush()
 
 	// Write header with new columns.
 	outHeader := append(header, "truelist_state", "truelist_sub_state", "truelist_suggestion")
@@ -257,6 +263,12 @@ func runFileValidation(c *client.Client) error {
 	}
 
 	_ = bar.Finish()
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return fmt.Errorf("failed to write CSV output: %w", err)
+	}
+
 	fmt.Fprintf(os.Stderr, "\nResults written to %s\n", outPath)
 
 	total := counts["valid"] + counts["invalid"] + counts["risky"] + counts["unknown"]
