@@ -1,0 +1,53 @@
+version: 2
+
+project_name: truelist
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: .
+    binary: truelist
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X github.com/Truelist-io-Email-Validation/truelist-cli/cmd.Version={{.Version}}
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+
+brews:
+  - repository:
+      owner: Truelist-io-Email-Validation
+      name: homebrew-tap
+    homepage: "https://truelist.io"
+    description: "CLI for Truelist.io email validation"
+    license: "MIT"
+    install: |
+      bin.install "truelist"
+    test: |
+      system "#{bin}/truelist", "version"
