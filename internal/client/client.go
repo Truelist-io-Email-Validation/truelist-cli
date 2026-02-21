@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 )
@@ -18,20 +19,36 @@ const (
 
 // ValidationResult holds the response from the Truelist API.
 type ValidationResult struct {
-	Email      string `json:"email"`
-	State      string `json:"state"`
-	SubState   string `json:"sub_state"`
-	FreeEmail  bool   `json:"free_email"`
-	Role       bool   `json:"role"`
-	Disposable bool   `json:"disposable"`
-	Suggestion string `json:"suggestion,omitempty"`
+	Email      string  `json:"address"`
+	Domain     string  `json:"domain"`
+	Canonical  string  `json:"canonical"`
+	MxRecord   *string `json:"mx_record"`
+	FirstName  *string `json:"first_name"`
+	LastName   *string `json:"last_name"`
+	State      string  `json:"email_state"`
+	SubState   string  `json:"email_sub_state"`
+	VerifiedAt string  `json:"verified_at"`
+	Suggestion *string `json:"did_you_mean"`
 }
 
-// AccountInfo holds the response from the whoami/account endpoint.
+// verifyResponse wraps the API response envelope.
+type verifyResponse struct {
+	Emails []ValidationResult `json:"emails"`
+}
+
+// AccountInfo holds the response from the /me endpoint.
 type AccountInfo struct {
-	Email   string `json:"email"`
-	Plan    string `json:"plan"`
-	Credits int    `json:"credits"`
+	Email       string      `json:"email"`
+	Name        string      `json:"name"`
+	UUID        string      `json:"uuid"`
+	TimeZone    string      `json:"time_zone"`
+	IsAdminRole bool        `json:"is_admin_role"`
+	Account     AccountPlan `json:"account"`
+}
+
+// AccountPlan holds the nested account plan info.
+type AccountPlan struct {
+	PaymentPlan string `json:"payment_plan"`
 }
 
 // Client is the Truelist API client.
@@ -131,8 +148,8 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body any) (
 func (c *Client) Validate(ctx context.Context, email string) (*ValidationResult, error) {
 	c.waitForToken()
 
-	payload := map[string]string{"email": email}
-	body, status, err := c.doRequest(ctx, http.MethodPost, "/api/v1/verify", payload)
+	path := "/api/v1/verify_inline?email=" + url.QueryEscape(email)
+	body, status, err := c.doRequest(ctx, http.MethodPost, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -147,11 +164,16 @@ func (c *Client) Validate(ctx context.Context, email string) (*ValidationResult,
 		return nil, fmt.Errorf("API error (status %d): %s", status, string(body))
 	}
 
-	var result ValidationResult
-	if err := json.Unmarshal(body, &result); err != nil {
+	var resp verifyResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
+	if len(resp.Emails) == 0 {
+		return nil, fmt.Errorf("API returned no results for %s", email)
+	}
+
+	result := resp.Emails[0]
 	if result.Email == "" {
 		result.Email = email
 	}
@@ -163,7 +185,7 @@ func (c *Client) Validate(ctx context.Context, email string) (*ValidationResult,
 func (c *Client) Whoami(ctx context.Context) (*AccountInfo, error) {
 	c.waitForToken()
 
-	body, status, err := c.doRequest(ctx, http.MethodGet, "/api/v1/account", nil)
+	body, status, err := c.doRequest(ctx, http.MethodGet, "/me", nil)
 	if err != nil {
 		return nil, err
 	}

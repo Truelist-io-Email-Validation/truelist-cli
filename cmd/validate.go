@@ -31,7 +31,7 @@ func init() {
 	validateCmd.Flags().StringVarP(&flagOutput, "output", "o", "", "Output file path (default: <input>_validated.csv)")
 	validateCmd.Flags().StringVarP(&flagColumn, "column", "c", "", "Name of the email column in the CSV")
 	validateCmd.Flags().BoolVar(&flagJSON, "json", false, "Output results as JSON")
-	validateCmd.Flags().BoolVarP(&flagQuiet, "quiet", "q", false, "Output only the state (valid/invalid/risky/unknown)")
+	validateCmd.Flags().BoolVarP(&flagQuiet, "quiet", "q", false, "Output only the state (ok/email_invalid/accept_all)")
 
 	rootCmd.AddCommand(validateCmd)
 }
@@ -97,7 +97,7 @@ func runStdinValidation(c *client.Client) error {
 
 	scanner := bufio.NewScanner(os.Stdin)
 	var results []*client.ValidationResult
-	counts := map[string]int{"valid": 0, "invalid": 0, "risky": 0, "unknown": 0}
+	counts := map[string]int{"ok": 0, "email_invalid": 0, "accept_all": 0, "unknown": 0}
 
 	for scanner.Scan() {
 		email := strings.TrimSpace(scanner.Text())
@@ -112,7 +112,12 @@ func runStdinValidation(c *client.Client) error {
 		}
 
 		results = append(results, result)
-		counts[strings.ToLower(result.State)]++
+		state := strings.ToLower(result.State)
+		if _, exists := counts[state]; exists {
+			counts[state]++
+		} else {
+			counts["unknown"]++
+		}
 
 		if flagJSON {
 			// In JSON mode, we'll collect and print at the end.
@@ -135,8 +140,8 @@ func runStdinValidation(c *client.Client) error {
 	}
 
 	if !flagQuiet && !flagJSON {
-		total := counts["valid"] + counts["invalid"] + counts["risky"] + counts["unknown"]
-		output.PrintSummary(os.Stdout, total, counts["valid"], counts["invalid"], counts["risky"], counts["unknown"])
+		total := counts["ok"] + counts["email_invalid"] + counts["accept_all"] + counts["unknown"]
+		output.PrintSummary(os.Stdout, total, counts["ok"], counts["email_invalid"], counts["accept_all"], counts["unknown"])
 	}
 
 	return scanner.Err()
@@ -208,7 +213,7 @@ func runFileValidation(c *client.Client) error {
 	writer := csv.NewWriter(outFile)
 
 	// Write header with new columns.
-	outHeader := append(header, "truelist_state", "truelist_sub_state", "truelist_role", "truelist_disposable", "truelist_suggestion")
+	outHeader := append(header, "truelist_state", "truelist_sub_state", "truelist_domain", "truelist_verified_at", "truelist_suggestion")
 	if err := writer.Write(outHeader); err != nil {
 		return fmt.Errorf("failed to write header: %w", err)
 	}
@@ -224,11 +229,10 @@ func runFileValidation(c *client.Client) error {
 		progressbar.OptionSetPredictTime(true),
 	)
 
-	counts := map[string]int{"valid": 0, "invalid": 0, "risky": 0, "unknown": 0}
+	counts := map[string]int{"ok": 0, "email_invalid": 0, "accept_all": 0, "unknown": 0}
 
 	for _, row := range rows {
 		if emailColIdx >= len(row) {
-			// Row doesn't have enough columns; write it with empty validation fields.
 			outRow := append(row, "", "", "", "", "")
 			_ = writer.Write(outRow)
 			_ = bar.Add(1)
@@ -252,18 +256,19 @@ func runFileValidation(c *client.Client) error {
 			continue
 		}
 
-		counts[strings.ToLower(result.State)]++
-
-		role := "false"
-		if result.Role {
-			role = "true"
-		}
-		disposable := "false"
-		if result.Disposable {
-			disposable = "true"
+		state := strings.ToLower(result.State)
+		if _, exists := counts[state]; exists {
+			counts[state]++
+		} else {
+			counts["unknown"]++
 		}
 
-		outRow := append(row, result.State, result.SubState, role, disposable, result.Suggestion)
+		suggestion := ""
+		if result.Suggestion != nil {
+			suggestion = *result.Suggestion
+		}
+
+		outRow := append(row, result.State, result.SubState, result.Domain, result.VerifiedAt, suggestion)
 		if writeErr := writer.Write(outRow); writeErr != nil {
 			return fmt.Errorf("failed to write row: %w", writeErr)
 		}
@@ -280,8 +285,8 @@ func runFileValidation(c *client.Client) error {
 
 	fmt.Fprintf(os.Stderr, "\nResults written to %s\n", outPath)
 
-	total := counts["valid"] + counts["invalid"] + counts["risky"] + counts["unknown"]
-	output.PrintSummary(os.Stderr, total, counts["valid"], counts["invalid"], counts["risky"], counts["unknown"])
+	total := counts["ok"] + counts["email_invalid"] + counts["accept_all"] + counts["unknown"]
+	output.PrintSummary(os.Stderr, total, counts["ok"], counts["email_invalid"], counts["accept_all"], counts["unknown"])
 
 	return nil
 }

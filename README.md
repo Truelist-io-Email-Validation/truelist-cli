@@ -51,16 +51,17 @@ truelist validate user@gmail.com
 
 ```
 ✓ user@gmail.com
-  State:     valid
-  Sub-state: ok
-  Free email: yes
+  State:       ok
+  Sub-state:   email_ok
+  Domain:      gmail.com
+  Canonical:   user
 ```
 
 **Flags:**
 | Flag | Description |
 |------|-------------|
 | `--json` | Output result as JSON |
-| `-q, --quiet` | Output only the state (`valid`, `invalid`, `risky`, `unknown`) |
+| `-q, --quiet` | Output only the state (`ok`, `email_invalid`, `accept_all`) |
 
 ### `truelist validate --file <path>`
 
@@ -72,7 +73,7 @@ truelist validate --file contacts.csv --column email_address
 truelist validate --file contacts.csv --output results.csv
 ```
 
-Outputs a new CSV with `truelist_state`, `truelist_sub_state`, and `truelist_suggestion` columns appended.
+Outputs a new CSV with `truelist_state`, `truelist_sub_state`, `truelist_domain`, `truelist_verified_at`, and `truelist_suggestion` columns appended.
 
 **Flags:**
 | Flag | Description |
@@ -100,9 +101,11 @@ truelist whoami
 
 ```
 Account Info
-  Email:   you@company.com
-  Plan:    Pro
-  Credits: 9,542
+  Email:      you@company.com
+  Name:       Your Name
+  UUID:       abc-123
+  Time Zone:  America/New_York
+  Plan:       pro
 ```
 
 ### `truelist config set api-key <key>`
@@ -146,51 +149,56 @@ export TRUELIST_API_KEY=YOUR_API_KEY
 
 ```
 ✓ user@gmail.com
-  State:     valid
-  Sub-state: ok
-  Free email: yes
+  State:       ok
+  Sub-state:   email_ok
+  Domain:      gmail.com
+  Canonical:   user
+  Verified At: 2026-02-21T10:00:00.000Z
 ```
 
 ### JSON (`--json`)
 
 ```json
 {
-  "email": "user@gmail.com",
-  "state": "valid",
-  "sub_state": "ok",
-  "free_email": true
+  "address": "user@gmail.com",
+  "domain": "gmail.com",
+  "canonical": "user",
+  "mx_record": null,
+  "first_name": null,
+  "last_name": null,
+  "email_state": "ok",
+  "email_sub_state": "email_ok",
+  "verified_at": "2026-02-21T10:00:00.000Z",
+  "did_you_mean": null
 }
 ```
 
 ### Quiet (`--quiet`)
 
 ```
-valid
+ok
 ```
 
 ## Validation States
 
 | State | Description |
 |-------|-------------|
-| `valid` | The email is deliverable |
-| `invalid` | The email is not deliverable |
-| `risky` | The email may be deliverable but has risk factors |
-| `unknown` | Could not determine deliverability |
+| `ok` | The email is deliverable |
+| `email_invalid` | The email is not deliverable |
+| `accept_all` | Domain accepts all addresses (catch-all) |
 
 ### Sub-states
 
 | Sub-state | Description |
 |-----------|-------------|
-| `ok` | Email is valid and deliverable |
-| `accept_all` | Domain accepts all addresses (catch-all) |
-| `disposable_address` | Temporary/disposable email address |
-| `role_address` | Role-based address (e.g., info@, admin@) |
+| `email_ok` | Email is valid and deliverable |
+| `is_disposable` | Temporary/disposable email address |
+| `is_role` | Role-based address (e.g., info@, admin@) |
 | `failed_mx_check` | Domain has no valid MX records |
 | `failed_spam_trap` | Address is a known spam trap |
 | `failed_no_mailbox` | Mailbox does not exist |
 | `failed_greylisted` | Server temporarily rejected the request |
 | `failed_syntax_check` | Email address has invalid syntax |
-| `unknown` | Could not determine sub-state |
 
 ## Rate Limits
 
