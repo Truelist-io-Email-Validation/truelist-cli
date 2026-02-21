@@ -24,29 +24,29 @@ func PrintValidationResult(w io.Writer, r *client.ValidationResult) {
 	icon, iconColor := stateIcon(r.State)
 	iconColor.Fprintf(w, "%s %s\n", icon, r.Email)
 
-	fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("State:"), stateColorized(r.State))
-	fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("Sub-state:"), r.SubState)
+	fmt.Fprintf(w, "  %-14s %s\n", dim.Sprint("State:"), stateColorized(r.State))
+	fmt.Fprintf(w, "  %-14s %s\n", dim.Sprint("Sub-state:"), r.SubState)
+	fmt.Fprintf(w, "  %-14s %s\n", dim.Sprint("Domain:"), r.Domain)
+	fmt.Fprintf(w, "  %-14s %s\n", dim.Sprint("Canonical:"), r.Canonical)
 
-	freeEmail := "no"
-	if r.FreeEmail {
-		freeEmail = "yes"
+	if r.MxRecord != nil {
+		fmt.Fprintf(w, "  %-14s %s\n", dim.Sprint("MX Record:"), *r.MxRecord)
 	}
-	fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("Free email:"), freeEmail)
 
-	role := "no"
-	if r.Role {
-		role = "yes"
+	if r.FirstName != nil && *r.FirstName != "" {
+		fmt.Fprintf(w, "  %-14s %s\n", dim.Sprint("First Name:"), *r.FirstName)
 	}
-	fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("Role:"), role)
 
-	disposable := "no"
-	if r.Disposable {
-		disposable = "yes"
+	if r.LastName != nil && *r.LastName != "" {
+		fmt.Fprintf(w, "  %-14s %s\n", dim.Sprint("Last Name:"), *r.LastName)
 	}
-	fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("Disposable:"), disposable)
 
-	if r.Suggestion != "" {
-		fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("Suggestion:"), cyan.Sprint(r.Suggestion))
+	if r.VerifiedAt != "" {
+		fmt.Fprintf(w, "  %-14s %s\n", dim.Sprint("Verified At:"), r.VerifiedAt)
+	}
+
+	if r.Suggestion != nil && *r.Suggestion != "" {
+		fmt.Fprintf(w, "  %-14s %s\n", dim.Sprint("Suggestion:"), cyan.Sprint(*r.Suggestion))
 	}
 }
 
@@ -63,22 +63,24 @@ func PrintValidationQuiet(w io.Writer, r *client.ValidationResult) {
 }
 
 // PrintSummary writes a validation batch summary.
-func PrintSummary(w io.Writer, total, valid, invalid, risky, unknown int) {
+func PrintSummary(w io.Writer, total, ok, invalid, acceptAll, unknown int) {
 	fmt.Fprintln(w)
 	bold.Fprintln(w, "Summary")
-	fmt.Fprintf(w, "  Total:   %d\n", total)
-	green.Fprintf(w, "  Valid:   %d\n", valid)
-	red.Fprintf(w, "  Invalid: %d\n", invalid)
-	yellow.Fprintf(w, "  Risky:   %d\n", risky)
-	dim.Fprintf(w, "  Unknown: %d\n", unknown)
+	fmt.Fprintf(w, "  Total:      %d\n", total)
+	green.Fprintf(w, "  OK:         %d\n", ok)
+	red.Fprintf(w, "  Invalid:    %d\n", invalid)
+	yellow.Fprintf(w, "  Accept All: %d\n", acceptAll)
+	dim.Fprintf(w, "  Unknown:    %d\n", unknown)
 }
 
 // PrintAccountInfo writes account details.
 func PrintAccountInfo(w io.Writer, info *client.AccountInfo) {
 	bold.Fprintln(w, "Account Info")
-	fmt.Fprintf(w, "  %-10s %s\n", dim.Sprint("Email:"), info.Email)
-	fmt.Fprintf(w, "  %-10s %s\n", dim.Sprint("Plan:"), info.Plan)
-	fmt.Fprintf(w, "  %-10s %d\n", dim.Sprint("Credits:"), info.Credits)
+	fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("Email:"), info.Email)
+	fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("Name:"), info.Name)
+	fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("UUID:"), info.UUID)
+	fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("Time Zone:"), info.TimeZone)
+	fmt.Fprintf(w, "  %-12s %s\n", dim.Sprint("Plan:"), info.Account.PaymentPlan)
 }
 
 // PrintError writes a user-friendly error message.
@@ -88,11 +90,11 @@ func PrintError(w io.Writer, msg string) {
 
 func stateIcon(state string) (string, *color.Color) {
 	switch strings.ToLower(state) {
-	case "valid":
+	case "ok":
 		return "\u2713", green
-	case "invalid":
+	case "email_invalid":
 		return "\u2717", red
-	case "risky":
+	case "accept_all":
 		return "!", yellow
 	default:
 		return "?", dim
@@ -101,11 +103,11 @@ func stateIcon(state string) (string, *color.Color) {
 
 func stateColorized(state string) string {
 	switch strings.ToLower(state) {
-	case "valid":
+	case "ok":
 		return green.Sprint(state)
-	case "invalid":
+	case "email_invalid":
 		return red.Sprint(state)
-	case "risky":
+	case "accept_all":
 		return yellow.Sprint(state)
 	default:
 		return dim.Sprint(state)
