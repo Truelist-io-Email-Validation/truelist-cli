@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 )
@@ -147,7 +148,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body any) (
 func (c *Client) Validate(ctx context.Context, email string) (*ValidationResult, error) {
 	c.waitForToken()
 
-	path := "/api/v1/verify_inline?email=" + email
+	path := "/api/v1/verify_inline?email=" + url.QueryEscape(email)
 	body, status, err := c.doRequest(ctx, http.MethodPost, path, nil)
 	if err != nil {
 		return nil, err
