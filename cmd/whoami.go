@@ -17,7 +17,7 @@ func init() {
 var whoamiCmd = &cobra.Command{
 	Use:   "whoami",
 	Short: "Display current account information",
-	Long:  "Check your API key and display account details including email, plan, and remaining credits.",
+	Long:  "Check your API key and display account details including email, name, and plan.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		apiKey, err := config.GetAPIKey()
 		if err != nil {
