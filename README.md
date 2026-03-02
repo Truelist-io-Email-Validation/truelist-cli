@@ -1,9 +1,14 @@
 # truelist-cli
 
+[![Free tier](https://img.shields.io/badge/free_plan-100_validations-4A7C59?style=flat-square)](https://truelist.io/pricing)
 The official command-line tool for [Truelist.io](https://truelist.io) email validation. Validate single emails, bulk CSV files, or pipe from stdin.
 
 <!-- TODO: Add animated demo GIF -->
 <!-- ![truelist-cli demo](docs/demo.gif) -->
+
+> **Start free** — 100 validations + 10 enhanced credits, no credit card required.
+> [Get your API key →](https://app.truelist.io/signup?utm_source=github&utm_medium=readme&utm_campaign=free-plan&utm_content=truelist-cli)
+> Works with the free plan.
 
 ## Installation
 
@@ -217,6 +222,10 @@ make test
 make build-all
 ```
 
+
+## Getting Started
+
+Sign up for a [free Truelist account](https://app.truelist.io/signup?utm_source=github&utm_medium=readme&utm_campaign=free-plan&utm_content=truelist-cli) to get your API key. The free plan includes 100 validations and 10 enhanced credits — no credit card required.
 ## License
 
 MIT - see [LICENSE](LICENSE) for details.
